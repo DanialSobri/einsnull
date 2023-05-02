@@ -1,14 +1,19 @@
-from typing import Optional
-
 from fastapi import FastAPI,APIRouter
+
+# /api/v1/student
+# student
+import student
+from config import settings
+
+router = APIRouter(prefix="{}".format(settings.API_V1_STR),
+                   tags=["core"]
+                   )
+
+@router.get("/")
+async def hello():
+    return {"message": "Hello World"}
 
 app = FastAPI()
 
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Optional[str] = None):
-    return {"item_id": item_id, "q": q}
+app.include_router(router)
+app.include_router(student.router)
