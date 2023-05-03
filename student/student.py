@@ -2,10 +2,12 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional,List
 
+# A Pydantic model to validate the item data
 class CourseModel(BaseModel):
     name: str
 
 class StudentModel(BaseModel):
+    id:int
     name: str
     email: EmailStr
     uni: Optional[str]
