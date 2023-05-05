@@ -1,16 +1,11 @@
 #  Hier liegt following endpoints:
-#  GET student/{id} : Return all student info in JSON format
-#  POST student/update/{id}
-#  DELETE student/{id}
-#  POST student/{id}/addcourse/{courseinfo}
-#  GET student/courses/   : Return all courses per student [ JSON ]
-
-from faker import Faker
 from fastapi import APIRouter, HTTPException
 from config import settings
-from student.student import StudentModel
-from pydantic import BaseModel, EmailStr
-from typing import Optional,List
+from student.student import Student,Course, create_new_student, generate_fake_student, create_new_course
+import logging
+
+logger = logging.getLogger("uvicorn")
+logger.setLevel(logging.INFO)
 
 router = APIRouter(
     prefix="{}/student".format(settings.API_V1_STR),
@@ -20,27 +15,9 @@ router = APIRouter(
 
 # Fake DB
 db = {}
-fake = Faker()
-
-# A Pydantic model to validate the item data
-class Student(BaseModel):
-    id:int
-    name: str
-    email: EmailStr
-    uni: Optional[str]
-    telnum: Optional[str]
-    address: Optional[str]
-    birth_date: Optional[str]
-    courses: Optional[list]
-
-# A helper function to generate a new item with fake data
-def create_new_student():
-    return Student(
-        id = len(db) + 1,
-        name = fake.name(),
-        email = fake.email(),
-        telnum = fake.msisdn()
-    )
+if settings.FAKE:
+    # Tabulate fake data
+    generate_fake_student(5,db,logger)
 
 # CRUD Student
 # Read all items in the database
@@ -58,7 +35,7 @@ async def get_student(student_id:int):
 # Create a new item and add it to the database
 @router.post("/create/", response_model=Student)
 def create_student():
-    student = create_new_student()
+    student = create_new_student(db)
     db[student.id] = student
     return student
 
@@ -79,10 +56,19 @@ async def delete_student(student_id:int):
     raise HTTPException(status_code=404, detail="Item not found")
 
 # CRUD courses
-@router.post("/{id}/addcourse/{courseinfo}")
-async def add_student_course():
-    return {"message": "Hello World"}
+@router.post("/{student_id}/addcourse",response_model=Student)
+async def add_student_course(student_id:int):
+    if student_id in db:
+        student = db.get(student_id)
+        new_course = create_new_course(student.courses)
+        student.courses[new_course.id] = new_course
+        return student
+    raise HTTPException(status_code=404, detail="Item not found")
 
-@router.get("/courses/")
-async def get_student_courses():
-    return {"message": "Hello World"}
+@router.get("/courses/{student_id}")
+async def get_student_courses(student_id:int):
+    if student_id in db:
+        student = db.get(student_id)
+        logger.info(type(student))
+        return student.courses
+    raise HTTPException(status_code=404, detail="Item not found")
